@@ -331,7 +331,12 @@ android {
 
 ### 持续集成
 
-`.github/workflows/android.yml` 配置了 GitHub Actions 流程，推送代码后自动执行：安装 JDK 17 与 Android SDK（Platform 36 + Build-Tools 36.0.0）→ 安装 Gradle 8.14.3 → 运行单元测试 → 构建 debug APK → 上传测试报告与 APK 作为构建产物。
+`.github/workflows/android.yml` 配置了 GitHub Actions 流程，推送代码后自动执行：安装 JDK 17、补齐 Android SDK 的 Platform 36 与 Build-Tools 36.0.0 → 通过 `./gradlew` 运行单元测试 → 构建 debug APK → 上传测试报告与 APK 作为构建产物。
+
+两点实现说明：
+
+- **Android SDK 使用 runner 预装的那份**，不依赖 `android-actions/setup-android`。该 action 会执行 `sdkmanager tools`，而 `tools` 包已从新版 SDK 仓库移除（cmdline-tools 16.0 起），会使 CI 在安装 SDK 阶段直接失败（`Failed to find package 'tools'`），后续步骤全部不会执行。使用 ubuntu-latest 预装的 SDK 可避开该问题，只需补装 Platform 与 Build-Tools。
+- **构建走仓库内的 `./gradlew`**，Gradle 版本由 Wrapper 锁定，与本地完全一致。注意 `gradlew` 必须以可执行位入库（git mode `100755`），否则 Linux runner 上会报 `Permission denied`。
 
 ### 验证 APK 的 ABI 完整性
 
