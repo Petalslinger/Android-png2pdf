@@ -1,9 +1,12 @@
 name: Android CI
 
-# 目的：在没有本地 Android SDK 的机器上也能拿到"完整、真实"的编译结论。
-# 故意用 `gradle` 命令而不是 `./gradlew`：本仓库不含 gradle-wrapper.jar，
-# 直接调 gradlew 会在 Linux 上报 "Permission denied / not found"。
-# wrapper 本身由下面的 "生成 Gradle Wrapper" 步骤补齐（顺便回存到仓库）。
+# 目的：在未安装本地 Android SDK 的机器上也能获得完整、真实的编译结论。
+#
+# 注意：本仓库不包含 gradle/wrapper/gradle-wrapper.jar 与 gradlew 脚本
+# （生成它们需要联网下载 Gradle 发行版），因此 CI 中直接调用全局 `gradle` 命令，
+# 而不是 `./gradlew`。若后续将 Wrapper 二进制提交进仓库，可改用 `./gradlew`。
+# 下方的「Generate Gradle Wrapper」步骤仅用于产出可回存的 Wrapper 文件，
+# 失败不影响后续构建。
 
 on:
   push:

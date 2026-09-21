@@ -27,8 +27,14 @@ object ImageMetaReader {
                 if (cursor.moveToFirst()) {
                     val nameIdx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                     if (nameIdx >= 0) name = cursor.getString(nameIdx) ?: name
+                    // SIZE 用 > 0 判断而不是只挡 null：DocumentsProvider 对某些来源
+                    // 会返回字面量 0（真实大小要打开流才知道），此时当"未知"处理，
+                    // 否则界面会显示成 "0 B"。未知保持 -1，formatSize 会返回空串。
                     val sizeIdx = cursor.getColumnIndex(OpenableColumns.SIZE)
-                    if (sizeIdx >= 0 && !cursor.isNull(sizeIdx)) size = cursor.getLong(sizeIdx)
+                    if (sizeIdx >= 0 && !cursor.isNull(sizeIdx)) {
+                        val reported = cursor.getLong(sizeIdx)
+                        if (reported > 0) size = reported
+                    }
                 }
             }
         }
