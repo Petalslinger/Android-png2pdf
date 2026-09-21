@@ -2,11 +2,12 @@ name: Android CI
 
 # 目的：在未安装本地 Android SDK 的机器上也能获得完整、真实的编译结论。
 #
-# 注意：本仓库不包含 gradle/wrapper/gradle-wrapper.jar 与 gradlew 脚本
-# （生成它们需要联网下载 Gradle 发行版），因此 CI 中直接调用全局 `gradle` 命令，
-# 而不是 `./gradlew`。若后续将 Wrapper 二进制提交进仓库，可改用 `./gradlew`。
-# 下方的「Generate Gradle Wrapper」步骤仅用于产出可回存的 Wrapper 文件，
-# 失败不影响后续构建。
+# 关于 Android SDK：
+# 不依赖 android-actions/setup-android。该 action 会执行 `sdkmanager tools`，
+# 而 `tools` 包已从新版 SDK 仓库移除（cmdline-tools 16.0 起），会直接失败：
+#   Warning: Failed to find package 'tools'  →  exit code 1
+# ubuntu-latest runner 已预装完整的 Android SDK，因此直接使用它，
+# 只补齐本工程需要的 Platform 与 Build-Tools。
 
 on:
   push:
@@ -27,6 +28,10 @@ jobs:
     permissions:
       contents: read
 
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,32 +42,27 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      # 装编译真正需要的两个包。platform-tools 由 setup-android 负责，这里只补平台和构建工具。
-      - name: Install platform 36 & build-tools
+      # 源码编译只需要 Platform 与 Build-Tools；platform-tools 已预装。
+      - name: Install Platform 36 & Build-Tools 36.0.0
         run: |
-          sdkmanager --install "platforms;android-36" "build-tools;36.0.0"
-          yes | sdkmanager --licenses > /dev/null || true
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | head -n 1)"
+          fi
+          echo "使用 sdkmanager: $SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0"
 
-      - name: Setup Gradle 8.14.3
+      # 只需要 Gradle 发行版缓存；实际构建走仓库内的 ./gradlew，版本由 Wrapper 决定。
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.14.3"
-
-      # 仓库里没有 wrapper 二进制（生成它需要联网），在 CI 里补上：
-      # 失败也不影响后面的编译，因为编译走的是全局 gradle 命令。
-      - name: Generate Gradle Wrapper
-        continue-on-error: true
-        run: gradle wrapper --gradle-version 8.14.3 --distribution-type bin
 
       # 单测是纯 JVM 的（排版计算不依赖 Android），不需要模拟器
       - name: Unit tests
-        run: gradle :app:testDebugUnitTest --no-daemon --stacktrace
+        run: ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace
 
       - name: Assemble debug APK
-        run: gradle :app:assembleDebug --no-daemon --stacktrace
+        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
 
       - name: Upload test reports
         if: always()
