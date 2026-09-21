@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 占位图标：一个"图片 -> PDF"的抽象形状（正式上架前请用 Image Asset 生成） -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M32,28h30l14,14v38a4,4 0 0 1 -4,4H32a4,4 0 0 1 -4,-4V32a4,4 0 0 1 4,-4z" />
+    <path
+        android:fillColor="#9CC4FF"
+        android:pathData="M62,28l14,14h-14z" />
+    <path
+        android:fillColor="#1F6FEB"
+        android:pathData="M38,58l9,10 6,-7 7,9H38z" />
+    <path
+        android:fillColor="#1F6FEB"
+        android:pathData="M38,74h32v3H38z" />
+</vector>

@@ -1,0 +1,78 @@
+name: Android CI
+
+# 目的：在没有本地 Android SDK 的机器上也能拿到"完整、真实"的编译结论。
+# 故意用 `gradle` 命令而不是 `./gradlew`：本仓库不含 gradle-wrapper.jar，
+# 直接调 gradlew 会在 Linux 上报 "Permission denied / not found"。
+# wrapper 本身由下面的 "生成 Gradle Wrapper" 步骤补齐（顺便回存到仓库）。
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: android-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build & Unit Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      # 装编译真正需要的两个包。platform-tools 由 setup-android 负责，这里只补平台和构建工具。
+      - name: Install platform 36 & build-tools
+        run: |
+          sdkmanager --install "platforms;android-36" "build-tools;36.0.0"
+          yes | sdkmanager --licenses > /dev/null || true
+
+      - name: Setup Gradle 8.14.3
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.14.3"
+
+      # 仓库里没有 wrapper 二进制（生成它需要联网），在 CI 里补上：
+      # 失败也不影响后面的编译，因为编译走的是全局 gradle 命令。
+      - name: Generate Gradle Wrapper
+        continue-on-error: true
+        run: gradle wrapper --gradle-version 8.14.3 --distribution-type bin
+
+      # 单测是纯 JVM 的（排版计算不依赖 Android），不需要模拟器
+      - name: Unit tests
+        run: gradle :app:testDebugUnitTest --no-daemon --stacktrace
+
+      - name: Assemble debug APK
+        run: gradle :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: app/build/reports/tests/
+          if-no-files-found: ignore
+
+      - name: Upload debug APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: warn

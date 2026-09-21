@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 简单的浅色主题壳：真正的配色在 Compose 的 Theme.kt 里 -->
+    <style name="Theme.Png2Pdf" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#FFFBFE</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

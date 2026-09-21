@@ -1,0 +1,4 @@
+# 复制成 local.properties 再改成本机 SDK 路径。
+# Android Studio 打开工程时会自己生成这一行，所以通常不需要手动建。
+# 路径里的反斜杠要写成 \\，冒号也要转义，这是 java properties 的语法要求。
+sdk.dir=C\:\\Users\\<你的用户名>\\AppData\\Local\\Android\\Sdk
